@@ -1,0 +1,17 @@
+{
+  "name": "casey-scripts",
+  "version": "0.0.1",
+  "description": "Utility scripts for Dr. Casey's website",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Will McVay",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

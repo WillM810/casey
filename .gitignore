@@ -1,0 +1,5 @@
+tmp/
+.air.toml
+scripts/node_modules/
+scripts/package-lock.json
+.vscode/
