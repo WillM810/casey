@@ -1,98 +1,116 @@
 import * as fs from 'fs';
 import * as path from 'path';
 // import * as cheerio from 'cheerio';
-import { URL } from 'url';
+import { URL, fileURLToPath } from 'url';
+import { parseArgs } from './parse-args.js';
+import * as crypto from 'crypto';
 
-// // Configuration
-// const BASE_URL = 'https://timeandpatiencetherapy.com/';
-// const OUTPUT_DIR = path.join(process.cwd(), 'public', 'casey');
+type argsType = {
+    _: string[];
+    output?: string;
+    o?: string;
+};
 
-// const visitedUrls = new Set<string>();
+const args = parseArgs() as argsType;
+const OUTPUT_DIR = path.join(process.cwd(), (args.o || args.output || 'site-rip-output'));
+const BASE_URL = args._[0] || 'https://example.com/';
 
-// function sanitizeFilename(url: string): string {
-//     return url.split('?')[0];
-// }
+const visitedUrls = new Set<string>();
 
-// async function recurseAssets(url: string, buffer: ArrayBuffer) {
-//     if (url.endsWith('.css')) {
-//         const content = Buffer.from(buffer).toString('utf-8');
-//         const assetUrls = Array.from(content.matchAll(/url\(([^)]+)\)/g)).map(m => m[1].replace(/['"]/g, ''));
-//         return assetUrls.map(assetUrl => fetchAndSave(new URL(assetUrl, url).toString(), path.join(OUTPUT_DIR, sanitizeFilename(new URL(assetUrl, url).pathname))));
-//     }
-// }
+function sanitizeFilename(urlStr: string): string {
+    const [url, search] = urlStr.split('?');
+    const hash = search ? crypto.createHash('md5').update(search).digest('hex').slice(0, 8) : '';
 
-// async function fetchAndSave(url: string, localPath: string) {
-//     try {
-//         if (visitedUrls.has(url)) return;
-//         visitedUrls.add(url);
-//         console.log('Fetching asset:', url);
-//         const res = await fetch(url);
-//         if (!res.ok) return console.error('Failed:', url, res.status);
+    const [file, ext] = url.split('.');
+    return file + (hash ? `_${hash}` : '') + (ext ? `.${ext}` : '');
+}
 
-//         const buffer = await res.arrayBuffer();
-//         await recurseAssets(url, buffer);
-//         fs.mkdirSync(path.dirname(localPath), { recursive: true });
-//         fs.writeFileSync(localPath, Buffer.from(buffer));
-//     } catch (err) {
-//         console.error('Error fetching', url, err);
-//     }
-// }
+function normalizeUrl(urlStr: string): string {
+    const resolvedUrl = new URL(urlStr);
+    const explicitUrl = resolvedUrl.pathname.endsWith('/') ? new URL('index.html', resolvedUrl) :
+        !resolvedUrl.pathname.includes('.') ? new URL(resolvedUrl.toString() + '/index.html') : resolvedUrl;
+    explicitUrl.search = resolvedUrl.search;
+    const hash = explicitUrl.search ? crypto.createHash('md5').update(explicitUrl.search).digest('hex').slice(0, 8) : '';
+    explicitUrl.search = '';
+    const [file, ext] = explicitUrl.pathname.split('.');
+    explicitUrl.pathname = file + (hash ? `_${hash}` : '') + (ext ? `.${ext}` : '');
+    return explicitUrl.toString();
+}
 
-// async function processPage(pageUrl: string, localDir: string) {
-//     if (visitedUrls.has(pageUrl)) return;
-//     visitedUrls.add(pageUrl);
-//     console.log('Downloading:', pageUrl);
-//     const res = await fetch(pageUrl);
-//     const html = await res.text();
+async function processPage(pageUrl: string, localDir: string) {
+    // console.log(normalizeUrl(new URL('/?1323131', BASE_URL).toString()));
+    // return;
+    fs.mkdirSync(localDir, { recursive: true });
 
-//     const $ = cheerio.load(html);
+    // Prevent re-processing the same URL
+    if (visitedUrls.has(pageUrl)) return;
+    visitedUrls.add(pageUrl);
 
-//     // Remove <base> tags
-//     $('base').remove();
+    console.log(`\n\n======\n\nProcessing page: ${pageUrl} into directory: ${localDir}`);
+    
+    const pagePath = normalizeUrl(pageUrl).replace(BASE_URL, OUTPUT_DIR);
 
-//     // Collect assets
-//     const assets: { url: string; localPath: string }[] = [];
+    const res = await fetch(pageUrl);
+    const contentType = res.headers.get('content-type').split(';')[0];
+    let content: string | Buffer | undefined;
+    switch (contentType) {
+        case 'text/html':
+            content = await res.text();
 
-//     $('img, script, link[rel="stylesheet"]').each((_, el) => {
-//         const attr = el.tagName === 'link' ? 'href' : 'src';
-//         let assetUrl = $(el).attr(attr);
-//         if (!assetUrl) return;
+            // Remove <base> tags
+            content = content.replace(/<base[^>]*>/g, '');
 
-//         if (assetUrl.startsWith('//')) assetUrl = 'https:' + assetUrl;
-//         if (assetUrl.startsWith('/')) assetUrl = new URL(assetUrl, BASE_URL).toString();
+            // Here you would parse the HTML, find assets and links, and process them accordingly.
+            content = content.replace(/(href|src)=["'](\/[^"']*?)["']/g, (match, p1, p2) => {
+                const absoluteUrl = new URL(p2, BASE_URL).toString();
+                console.log('\n\nFound asset/link:', absoluteUrl, 'on page:', pageUrl);
+                const relPath = normalizeUrl(absoluteUrl).replace(BASE_URL, './');
+                console.log('Mapped to relative path:', relPath, 'from base dir:', localDir);
+                const localPath = path.join(OUTPUT_DIR, relPath);
+                console.log('Full local path:', localPath);
+                // Schedule asset for download
+                processPage(absoluteUrl, path.dirname(localPath));
+                const rContent = `${p1}="./${path.relative(localDir, localPath).replace(/\\/g, '/')}"`;
+                console.log(`Replaced "${match}" with:`, rContent);
+                return rContent;
+            });
+            // For simplicity, we just save the HTML content directly.
+            fs.writeFileSync(pagePath, content as string);
+            break;
+        case 'text/css':
+            content = await res.text();
+            content = content.replace(/url\(([^)]+)\)/g, (match, p1) => {
+                const assetUrl = p1.replace(/['"]/g, '');
+                console.log('\n\nFound CSS asset:', assetUrl, 'on page:', pageUrl);
+                const absoluteUrl = new URL(assetUrl, pageUrl).toString();
+                console.log('Resolved to absolute URL:', absoluteUrl);
+                const relPath = normalizeUrl(absoluteUrl).replace(BASE_URL, './');
+                console.log('Mapped to relative path:', relPath, 'from:', localDir);
+                const localPath = path.resolve(OUTPUT_DIR, relPath);
+                console.log('Full local path:', localPath);
+                // Schedule asset for download
+                processPage(absoluteUrl, path.dirname(localPath));
+                const rContent = `url(./${path.relative(localDir, localPath).replace(/\\/g, '/')})`;
+                console.log(`Replaced "${match}" with:`, rContent);
+                return rContent;
+            });
+            fs.writeFileSync(pagePath, content as string);
+            break;
+        case 'application/javascript':
+            content = await res.text();
+            fs.writeFileSync(pagePath, content as string);
+            break;
+        case 'image/png':
+        case 'image/jpeg':
+        case 'image/gif':
+        case 'image/svg+xml':
+            const buffer = await res.arrayBuffer();
+            fs.writeFileSync(pagePath, Buffer.from(buffer));
+            break;
+        default:
+            console.log('Unknown content type:', res.headers.get('content-type'));
+    }
+    
+}
 
-//         if (!assetUrl.startsWith(BASE_URL)) return; // don't follow outside links
-//         const relPath = sanitizeFilename(assetUrl.replace(BASE_URL, './'));
-//         const localPath = path.join(localDir, relPath);
-//         $(el).attr(attr, './' + path.relative(localDir, localPath).replace(/\\/g, '/'));
-//         assets.push({ url: assetUrl, localPath });
-//     });
-
-//     await Promise.all($('a').map(async (_, el) => {
-//         let linkUrl = $(el).attr('href');
-//         if (!linkUrl) return;
-//         console.log('Found link:', linkUrl);
-//         let mirrorUrl = linkUrl;
-//         if (linkUrl.startsWith('/')) mirrorUrl = '.' + linkUrl + '/index.html';
-//         $(el).attr('href', mirrorUrl);
-//         if (mirrorUrl.startsWith('./'))
-//             await processPage(new URL(linkUrl, BASE_URL).toString(), path.join(localDir, sanitizeFilename(new URL(linkUrl, BASE_URL).pathname)));
-//     }));
-
-//     // Save the page
-//     const pagePath = path.join(localDir, 'index.html');
-//     fs.mkdirSync(path.dirname(pagePath), { recursive: true });
-//     fs.writeFileSync(pagePath, $.html());
-
-//     // Download assets
-//     await Promise.all(assets.map(a => fetchAndSave(a.url, a.localPath)));
-// }
-
-// async function main() {
-//     await processPage(BASE_URL, OUTPUT_DIR);
-
-//     console.log('Site mirror completed.');
-// }
-
-// main();
-console.log('Site rip script placeholder.');
+(async () => { await processPage(BASE_URL, OUTPUT_DIR); })();
