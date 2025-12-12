@@ -58,8 +58,15 @@ func main() {
 		}
 
 		body := fmt.Sprintf(
-			"From: %s <%s>\nTo: %s\nSubject: Website Contact Form Submission\n\n%s",
-			name, email, toEmail, message,
+			"From: %s\n"+
+				"Reply-To: %s <%s>"+
+				"To: %s\n"+
+				"Subject: Website Contact Form Submission\n\n"+
+				"Name: %s\n"+
+				"Email: %s\n"+
+				"Phone: %s\n"+
+				"Message: \n%s",
+			toEmail, name, email, toEmail, name, email, phone, message,
 		)
 
 		auth := smtp.PlainAuth("", smtpUser, smtpPassword, smtpHost)

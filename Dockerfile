@@ -7,7 +7,7 @@ FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
 # Copy Go modules manifests
-COPY go.mod ./
+COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
