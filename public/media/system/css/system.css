@@ -5,65 +5,65 @@
 
 /* System Messages */
 #system-message {
-	margin-bottom: 10px;
-	padding: 0;
+    margin-bottom: 10px;
+    padding: 0;
 }
 
 #system-message > dt {
-	font-weight: bold;
-	display: none;
+    font-weight: bold;
+    display: none;
 }
 
 #system-message > dd {
-	margin: 0;
-	font-weight: bold;
-	text-indent: 30px;
+    margin: 0;
+    font-weight: bold;
+    text-indent: 30px;
 }
 
 #system-message > dd > ul {
-	color: #0055BB;
-	background-position: 4px top;
-	background-repeat: no-repeat;
-	margin-bottom: 10px;
-	list-style: none;
-	padding: 10px;
-	border-top: 3px solid #84A7DB;
-	border-bottom: 3px solid #84A7DB;
+    color: #0055bb;
+    background-position: 4px top;
+    background-repeat: no-repeat;
+    margin-bottom: 10px;
+    list-style: none;
+    padding: 10px;
+    border-top: 3px solid #84a7db;
+    border-bottom: 3px solid #84a7db;
 }
 
 #system-message > dd > ul > li {
-	line-height: 1.5em;
+    line-height: 1.5em;
 }
 
 /* System Standard Messages */
 #system-message > .message > ul {
-	background-color: #C3D2E5;
-	background-image: url(./../images/notice-info.png);
+    background-color: #c3d2e5;
+    background-image: url(./../images/notice-info.png);
 }
 
 /* System Error Messages */
 #system-message > .error > ul,
 #system-message > .warning > ul,
 #system-message > .notice > ul {
-	color: #c00;
+    color: #c00;
 }
 
 #system-message > .error > ul {
-	background-color: #E6C0C0;
-	background-image: url(./../images/notice-alert.png);
-	border-color: #DE7A7B;
+    background-color: #e6c0c0;
+    background-image: url(./../images/notice-alert.png);
+    border-color: #de7a7b;
 }
 
 /* System Warning Messages */
 #system-message > .warning > ul {
-	background-color: #E6C8A6;
-	background-image: url(./../images/notice-note.png);
-	border-color: #FFBB00;
+    background-color: #e6c8a6;
+    background-image: url(./../images/notice-note.png);
+    border-color: #ffbb00;
 }
 
 /* System Notice Messages */
 #system-message > .notice > ul {
-	background-color: #EFE7B8;
-	background-image: url(./../images/notice-note.png);
-	border-color: #F0DC7E;
+    background-color: #efe7b8;
+    background-image: url(./../images/notice-note.png);
+    border-color: #f0dc7e;
 }
