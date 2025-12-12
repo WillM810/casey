@@ -12,8 +12,9 @@ type argsType = {
 };
 
 const args = parseArgs() as argsType;
-const OUTPUT_DIR = path.join(process.cwd(), (args.o || args.output || 'site-rip-output'));
+const OUTPUT_DIR = path.join(process.cwd(), (args.o || args.output || 'site-rip-output/'));
 const BASE_URL = args._[0] || 'https://example.com/';
+const HTTP_ALIAS = /https/.test(BASE_URL) ? BASE_URL.replace(/https/, 'http') : BASE_URL.replace(/http/, 'https');
 
 const visitedUrls = new Set<string>();
 
@@ -38,8 +39,6 @@ function normalizeUrl(urlStr: string): string {
 }
 
 async function processPage(pageUrl: string, localDir: string) {
-    // console.log(normalizeUrl(new URL('/?1323131', BASE_URL).toString()));
-    // return;
     fs.mkdirSync(localDir, { recursive: true });
 
     // Prevent re-processing the same URL
@@ -59,18 +58,23 @@ async function processPage(pageUrl: string, localDir: string) {
 
             // Remove <base> tags
             content = content.replace(/<base[^>]*>/g, '');
+            content = content.replaceAll(BASE_URL, '/').replaceAll(HTTP_ALIAS, '/');
 
             // Here you would parse the HTML, find assets and links, and process them accordingly.
-            content = content.replace(/(href|src)=["'](\/[^"']*?)["']/g, (match, p1, p2) => {
+            content = content.replace(/(href|src|action)=["'](\/[^"']*?)["']/g, (match, p1, p2) => {
                 const absoluteUrl = new URL(p2, BASE_URL).toString();
-                console.log('\n\nFound asset/link:', absoluteUrl, 'on page:', pageUrl);
-                const relPath = normalizeUrl(absoluteUrl).replace(BASE_URL, './');
+                console.log(`\n\nFound asset/link (${p1}):`, absoluteUrl, 'on page:', pageUrl);
+                const relPath = p1 !== 'action' ?
+                    normalizeUrl(absoluteUrl).replace(BASE_URL, './') :
+                    absoluteUrl.replace(BASE_URL, '/');
                 console.log('Mapped to relative path:', relPath, 'from base dir:', localDir);
                 const localPath = path.join(OUTPUT_DIR, relPath);
                 console.log('Full local path:', localPath);
                 // Schedule asset for download
-                processPage(absoluteUrl, path.dirname(localPath));
-                const rContent = `${p1}="./${path.relative(localDir, localPath).replace(/\\/g, '/')}"`;
+                if (p1 !== 'action') processPage(absoluteUrl, path.dirname(localPath));
+                const rContent = p1 !== 'action' ?
+                    `${p1}="./${path.relative(localDir, localPath).replace(/\\/g, '/')}"` :
+                    `${p1}="/${path.relative(OUTPUT_DIR, localPath).replace(/\\/g, '/')}"`;
                 console.log(`Replaced "${match}" with:`, rContent);
                 return rContent;
             });

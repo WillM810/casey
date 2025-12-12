@@ -82,6 +82,34 @@ jQuery.fn.decHTMLifEnc = function(){
       me.html(html.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
   });
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const successParam = params.get("success");
+
+  const missing = document.getElementById("required");
+  const error = document.getElementById("error");
+  const success = document.getElementById("success");
+
+  const elements = [null, success, missing, error];
+  elements.forEach((el, idx) => {
+    if (!idx) return;
+    if (idx.toString() === successParam) el.style.display = "block";
+    else el.style.display = "none";
+  });
+
+  if (params.has("success")) {
+    params.delete("success");
+    const newUrl = window.location.pathname + (params.toString() ? "?" + params.toString() : "");
+    window.history.replaceState({}, "", newUrl);
+  }
+
+  setTimeout(() => {
+    elements.forEach((el, idx) => {
+      if (idx) el.style.display = "none";
+    })
+  }, 5000);
+});
  
 </script>
  <script type="text/javascript" src="./../templates/template21/script.js"></script>
@@ -133,13 +161,18 @@ jQuery(document).ready(function(){
 <div class="art-layout-cell art-content">
 <div class="main_content1">
   <div class="art-nostyle">
-<style type="text/css"><!--div.rapid_contact tr, div.rapid_contact td { border: none; padding: 3px; }--></style><div class="rapid_contact "><form id="contactform" action="http://timeandpatiencetherapy.com/contact-me" method="post">
+<style type="text/css"><!--div.rapid_contact tr, div.rapid_contact td { border: none; padding: 3px; }--></style><div class="rapid_contact "><form id="contactform" action="/contact-me" method="post">
 <div class="rapid_contact intro_text "></div>
 <table><tr><td>Name</td><td><input class="rapid_contact inputbox " type="text" name="rp_name" size="15" value=""/></td></tr>
 <tr><td>Email:</td><td><input class="rapid_contact inputbox " type="text" name="rp_email" size="15" value=""/></td></tr>
 <tr><td>Phone:</td><td><input class="rapid_contact inputbox " type="text" name="rp_subject" size="15" value=""/></td></tr>
 <tr><td valign="top">Message:</td><td><textarea class="rapid_contact textarea " name="rp_message" cols="13" rows="4"></textarea></td></tr>
-<tr><td colspan="2"><input class="rapid_contact button " type="submit" value="Send Message" style="width: 100%"/></td></tr></table></form></div>
+<tr><td colspan="2"><input class="rapid_contact button " type="submit" value="Send Message" style="width: 100%"/></td></tr>
+<tr><td colspan="2">
+  <div style="display: none;" id="required">All fields are required.</div>
+  <div style="display: none;" id="error">Form error logged.</div>
+  <div style="display: none;" id="success">Request submitted successfully.</div>
+</td></tr></table></form></div>
 </div>
 <div class="art-nostyle">
 

@@ -4,3 +4,4 @@ build/
 scripts/node_modules/
 scripts/package-lock.json
 .vscode/
+.env
