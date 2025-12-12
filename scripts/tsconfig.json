@@ -1,9 +1,13 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "lib": ["ES2022"],
-    "types": ["node"]
-  }
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "esnext",
+        "moduleResolution": "node",
+        "lib": [
+            "ES2022"
+        ],
+        "types": [
+            "node"
+        ]
+    }
 }
