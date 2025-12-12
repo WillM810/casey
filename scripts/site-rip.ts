@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-// import * as cheerio from 'cheerio';
-import { URL, fileURLToPath } from 'url';
+import { URL } from 'url';
 import { parseArgs } from './parse-args.js';
 import * as crypto from 'crypto';
 
@@ -17,14 +16,6 @@ const BASE_URL = args._[0] || 'https://example.com/';
 const HTTP_ALIAS = /https/.test(BASE_URL) ? BASE_URL.replace(/https/, 'http') : BASE_URL.replace(/http/, 'https');
 
 const visitedUrls = new Set<string>();
-
-function sanitizeFilename(urlStr: string): string {
-    const [url, search] = urlStr.split('?');
-    const hash = search ? crypto.createHash('md5').update(search).digest('hex').slice(0, 8) : '';
-
-    const [file, ext] = url.split('.');
-    return file + (hash ? `_${hash}` : '') + (ext ? `.${ext}` : '');
-}
 
 function normalizeUrl(urlStr: string): string {
     const resolvedUrl = new URL(urlStr);
@@ -46,6 +37,7 @@ async function processPage(pageUrl: string, localDir: string) {
     visitedUrls.add(pageUrl);
 
     console.log(`\n\n======\n\nProcessing page: ${pageUrl} into directory: ${localDir}`);
+    const schedule = [];
     
     const pagePath = normalizeUrl(pageUrl).replace(BASE_URL, OUTPUT_DIR);
 
@@ -70,8 +62,7 @@ async function processPage(pageUrl: string, localDir: string) {
                 console.log('Mapped to relative path:', relPath, 'from base dir:', localDir);
                 const localPath = path.join(OUTPUT_DIR, relPath);
                 console.log('Full local path:', localPath);
-                // Schedule asset for download
-                if (p1 !== 'action') processPage(absoluteUrl, path.dirname(localPath));
+                if (p1 !== 'action') schedule.push(processPage(absoluteUrl, path.dirname(localPath)));
                 const rContent = p1 !== 'action' ?
                     `${p1}="./${path.relative(localDir, localPath).replace(/\\/g, '/')}"` :
                     `${p1}="/${path.relative(OUTPUT_DIR, localPath).replace(/\\/g, '/')}"`;
@@ -92,8 +83,7 @@ async function processPage(pageUrl: string, localDir: string) {
                 console.log('Mapped to relative path:', relPath, 'from:', localDir);
                 const localPath = path.resolve(OUTPUT_DIR, relPath);
                 console.log('Full local path:', localPath);
-                // Schedule asset for download
-                processPage(absoluteUrl, path.dirname(localPath));
+                schedule.push(processPage(absoluteUrl, path.dirname(localPath)));
                 const rContent = `url(./${path.relative(localDir, localPath).replace(/\\/g, '/')})`;
                 console.log(`Replaced "${match}" with:`, rContent);
                 return rContent;
@@ -115,6 +105,7 @@ async function processPage(pageUrl: string, localDir: string) {
             console.log('Unknown content type:', res.headers.get('content-type'));
     }
     
+    await Promise.all(schedule);
 }
 
 (async () => { await processPage(BASE_URL, OUTPUT_DIR); })();
