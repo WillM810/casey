@@ -25,10 +25,11 @@ func main() {
 	smtpUser := os.Getenv("SMTP_USER")
 	smtpPassword := os.Getenv("SMTP_PASSWORD")
 	toEmail := os.Getenv("TO_EMAIL")
+	autoEmail := os.Getenv("AUTO_EMAIL")
 
 	// Validate required env vars on startup
 	if smtpHost == "" || smtpPort == "" || smtpUser == "" ||
-		smtpPassword == "" || toEmail == "" {
+		smtpPassword == "" || toEmail == "" || autoEmail == "" {
 
 		log.Fatal("Missing one or more required SMTP environment variables")
 	}
@@ -50,9 +51,8 @@ func main() {
 		name := r.FormValue("rp_name")
 		email := r.FormValue("rp_email")
 		phone := r.FormValue("rp_subject")
-		message := r.FormValue("rp_message")
 
-		if name == "" || email == "" || phone == "" || message == "" {
+		if name == "" || email == "" || phone == "" {
 			http.Redirect(w, r, "/contact-me?success=2", http.StatusFound)
 			return
 		}
@@ -65,7 +65,7 @@ func main() {
 				"Name: %s\n"+
 				"Email: %s\n"+
 				"Phone: %s\n",
-			toEmail, name, email, toEmail, name, email, phone,
+			autoEmail, name, email, toEmail, name, email, phone,
 		)
 
 		auth := smtp.PlainAuth("", smtpUser, smtpPassword, smtpHost)
