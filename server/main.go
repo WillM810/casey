@@ -64,9 +64,8 @@ func main() {
 				"Subject: Website Contact Form Submission\n\n"+
 				"Name: %s\n"+
 				"Email: %s\n"+
-				"Phone: %s\n"+
-				"Message: \n%s",
-			toEmail, name, email, toEmail, name, email, phone, message,
+				"Phone: %s\n",
+			toEmail, name, email, toEmail, name, email, phone,
 		)
 
 		auth := smtp.PlainAuth("", smtpUser, smtpPassword, smtpHost)
