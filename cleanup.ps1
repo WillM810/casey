@@ -1,51 +1,72 @@
 # -------------------------------------------------------------------
 # CONFIG
 # -------------------------------------------------------------------
-$SERVICE = "casey"
-$PROJECT = "coral-marker-245905"
-$IMAGE = "gcr.io/${PROJECT}/${SERVICE}:latest"
-$REPO_PATH = "gcr.io/${PROJECT}/${SERVICE}"
+$SERVICE  = "casey"
+$PROJECT  = "casey-website-481117"
+$REGION   = "us-central1"
+$REPO     = "casey"
 
-$pushedDigest = docker inspect $IMAGE `
-    --format='{{index .RepoDigests 0}}'
+$IMAGE_PATH = "${REGION}-docker.pkg.dev/$PROJECT/$REPO/$SERVICE"
 
-# Assume $pushedDigest contains the pushed image, e.g.:
-# gcr.io/coral-marker-245905/willmcvay@sha256:81e4f39a6c3c96bd...
-# Extract just the digest portion
-$activeDigest = ($pushedDigest -split "@")[-1]
-
-Write-Host ("Active deployed image digest: {0}" -f $activeDigest) -ForegroundColor Cyan
+Write-Host "Listing digests for package $IMAGE_PATH ..." -ForegroundColor Cyan
 
 # -------------------------------------------------------------------
-# List all digests in the repository
+# Get all digests in the package
 # -------------------------------------------------------------------
-$allDigests = gcloud container images list-tags $REPO_PATH `
-    --format="get(digest)" `
-    --limit=9999
+$allDigestsJson = gcloud artifacts docker images list $IMAGE_PATH `
+    --project $PROJECT `
+    --format="json" 2>$null
+
+$allDigests = ($allDigestsJson | ConvertFrom-Json) | ForEach-Object { $_.version }
 
 if (-not $allDigests) {
-    Write-Host "No images found in GCR repository $REPO_PATH. Nothing to clean." -ForegroundColor Yellow
+    Write-Host "No digests found. Nothing to clean." -ForegroundColor Yellow
     exit 0
 }
 
+Write-Host "Listing tags for package $IMAGE_PATH ..." -ForegroundColor Cyan
+
+# Get all tags for the package
+$tagListJson = gcloud artifacts docker tags list "$IMAGE_PATH" --format=json 2>$null
+
+$tags = $tagListJson | ConvertFrom-Json
+
+Write-Host $tags
+
+# Find the digest that has the 'latest' tag
+$latestDigest = ($tags | Where-Object { $_.tag -like "*/latest" }).version
+$latestDigestShort = ($latestDigest -split "/")[-1]
+
+if (-not $latestDigest) {
+    Write-Host "Warning: no 'latest' tag found. Will not preserve any digest by tag." -ForegroundColor Yellow
+} else {
+    Write-Host "Active digest (latest): $latestDigestShort" -ForegroundColor Green
+}
+
+Write-Host "Total digests found: $($allDigests.Count)" -ForegroundColor Cyan
+
 # -------------------------------------------------------------------
-# Delete all digests except the active one
+# Cleanup loop
 # -------------------------------------------------------------------
 foreach ($digest in $allDigests) {
-    # List tags for this digest
-    $tags = gcloud container images list-tags $REPO_PATH --filter="digest:$digest" --format="value(tags)"
-    
-    if ($digest -eq $activeDigest) {
-        Write-Host "Preserving active digest: $digest" -ForegroundColor Green
-    } elseif ($tags) {
-        Write-Host "Skipping digest $digest because it still has tags: $tags" -ForegroundColor Yellow
-    } else {
-        Write-Host "Deleting unused digest: $digest" -ForegroundColor Cyan
-        gcloud container images delete "$REPO_PATH@$digest" --quiet 2>$null
 
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Failed to delete digest $digest, probably still referenced by layers. Skipping." -ForegroundColor Red
-        }
+    if ($digest -eq $latestDigestShort) {
+        Write-Host "Preserving active digest: $digest" -ForegroundColor Green
+        continue
+    }
+
+    if ($taggedDigests -contains $digest) {
+        Write-Host "Skipping digest with tag(s): $digest" -ForegroundColor Yellow
+        continue
+    }
+
+    Write-Host "Deleting unused digest: $digest" -ForegroundColor Cyan
+
+    gcloud artifacts docker images delete "$IMAGE_PATH@$digest" `
+        --quiet 2>$null
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Failed to delete digest $digest. Skipping." -ForegroundColor Red
     }
 }
 

@@ -4,10 +4,11 @@
 $ServiceName = "casey"
 $Region = "us-central1"
 $DockerTag = "latest"
-$ProjectId = "coral-marker-245905"
+$ProjectId = "casey-website-481117"
+$RepoName = "casey"
 
 # Safely interpolate variables using ${} everywhere
-$Image = "gcr.io/${ProjectId}/${ServiceName}:${DockerTag}"
+$Image = "${Region}-docker.pkg.dev/${ProjectId}/${RepoName}/${ServiceName}:${DockerTag}"
 
 Write-Host "Building Docker image $Image..."
 docker build -t $Image .
@@ -27,6 +28,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Deploying ${ServiceName} to Cloud Run in ${Region}..."
 gcloud run deploy ${ServiceName} `
+    --project ${ProjectId} `
     --image ${Image} `
     --platform managed `
     --region ${Region} `
