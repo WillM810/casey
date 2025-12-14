@@ -300,7 +300,7 @@
                                                     <div class="custom1"
                                                         style="border: 1px solid #96b762; padding: 5px; margin-left: 15px;">
                                                         <p><img style="width: 115px; height: auto; border: 5px solid #96b762; margin-left: auto; display: block; margin-right: auto;"
-                                                                src="./images/DSCF0765.jpg" alt="DSCF0765" height="148" /></p>
+                                                                src="./images/DSCF0765.jpg" alt="Patrick Casey, LPCMH, C.A.D.C. therapist serving Dover, DE for over 20 years." height="148" /></p>
                                                         <center><strong>Patrick H Casey,<br/>LPCMH, C.A.D.C.</strong></center>
                                                         <p style="text-align: center; font-size: 11px;">Time and Patience Consulting LLC</p>
                                                         <p style="text-align: center; font-size: 11px;">1001 S Bradford, Ste. 3</p>
