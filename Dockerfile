@@ -16,7 +16,7 @@ RUN go mod download
 COPY server/ ./server/
 
 # Build the Go binary
-RUN go build -o /server ./server/main.go
+RUN go build -o /server ./server/*
 
 # -----------------------
 # Final stage
